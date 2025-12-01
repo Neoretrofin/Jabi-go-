@@ -42,6 +42,7 @@
         .row-loss { border-left-color: #ef5350; background: #ffebee; }
         .status-lobby { color: #4caf50; font-weight: bold; }
         .status-playing { color: #ff9800; }
+        .status-watching { color: #7e57c2; }
         .action-btn { padding: 4px 10px; font-size: 0.8em; width: auto; margin: 0; }
         .link-btn { background:none; border:none; color:#1e88e5; cursor:pointer; padding:0; text-decoration:underline; font-size:0.9em; width:auto; text-align:left;}
 
@@ -517,11 +518,12 @@
         document.getElementById(id).classList.add('active');
         if (id !== 'screen-login') document.getElementById('nav-bar').style.display = 'flex';
         
+        // -- FIX BUTTON VISIBILITY GLOBALLY --
         const btn = document.getElementById('global-return-btn');
-        if (id === 'screen-game') {
-            btn.style.display = 'none'; 
+        if (amIPlaying && id !== 'screen-game') {
+             btn.style.display = 'block';
         } else {
-            btn.style.display = amIPlaying ? 'block' : 'none';
+             btn.style.display = 'none';
         }
 
         if (id === 'screen-lobby') {
@@ -650,8 +652,12 @@
             </tr>`;
         });
         
-        if (!document.getElementById('screen-game').classList.contains('active')) {
-            document.getElementById('global-return-btn').style.display = amIPlaying ? 'block' : 'none';
+        // Force button check in case we are already on a screen
+        const btn = document.getElementById('global-return-btn');
+        if (amIPlaying && !document.getElementById('screen-game').classList.contains('active')) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
         }
 
         const gt = document.getElementById('game-table'); gt.innerHTML = '';
@@ -933,9 +939,10 @@
     });
 
     function leaveGame() {
+        // Modified to just switch screen, which triggers refresh_lobby
+        // and logic inside showScreen handles button visibility
         if(gameState && gameState.phase==='PLAYING' && (myRole===1||myRole===2)) {
             showScreen('screen-lobby');
-            document.getElementById('global-return-btn').style.display = 'block';
             return;
         }
         socket.emit('leave_game');
@@ -1092,16 +1099,7 @@
             wait.style.display='none';
         }
         
-        // Use the helper here to draw the correct state
-        drawGenericBoard(liveCtx, getCurrentRenderState(), null);
-    }
-    
-    // Helper to determine what to draw on live board
-    function getCurrentRenderState() {
-        if (gameState && gameState.phase === 'FINISHED' && activeReviewIndex !== -1 && activeReviewIndex < gameState.full_history.length) {
-            return gameState.full_history[activeReviewIndex];
-        }
-        return gameState;
+        drawGenericBoard(liveCtx, stateToShow, null);
     }
 
     // --- DRAWING ---
@@ -1142,7 +1140,6 @@
         
         // Ghost Stone Logic (SIMPLIFIED for Reliability)
         if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && state === gameState && myRole === state.current_player) {
-            // Simply draw ghost at hover coordinates
             let cx = PADDING + hoverStone.x * CELL_SIZE;
             let cy = PADDING + hoverStone.y * CELL_SIZE;
             ctx.globalAlpha = 0.5;
@@ -1213,20 +1210,22 @@
         if(isMobile()) return; 
         if(!gameState) return;
         
-        // Determine if we should calculate ghost stone
         let stateToDraw = getCurrentRenderState();
         
-        // Reset first
-        hoverStone = null;
-
-        // If playing and it's my turn and we are viewing the live board
+        // Only calculate hover if we are actually PLAYING and current state is live state
         if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && stateToDraw === gameState) {
              const c = getBoardCoords(e, liveCanvas);
              if(c.x>=0 && c.x<BOARD_SIZE && c.y>=0 && c.y<BOARD_SIZE) {
                 if(gameState.board[c.y][c.x] === 0) {
                     hoverStone = {x: c.x, y: c.y};
+                } else {
+                    hoverStone = null;
                 }
+            } else {
+                hoverStone = null;
             }
+        } else {
+            hoverStone = null;
         }
         
         drawGenericBoard(liveCtx, stateToDraw, null);
