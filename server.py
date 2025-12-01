@@ -86,7 +86,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[GoOnline:v27]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v29]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -170,11 +170,9 @@ def handle_disconnect():
     sid = request.sid
     if sid in online_users:
         u = online_users[sid]
-        # Удаляем пользователя из списков зрителей всех игр
         for gid, g in games.items():
             if u['username'] in g['spectators']:
                 g['spectators'].remove(u['username'])
-        
         del online_users[sid]
         broadcast_lobby_state()
 
@@ -267,7 +265,6 @@ def broadcast_lobby_state():
         u_db = User.query.get(v['user_id'])
         
         current_status = v['status']
-        # Мы убрали 'watching', поэтому если игра не playing, то всегда lobby
         gid = v['game_id']
         if current_status == 'playing' and (not gid or gid not in games or games[gid]['phase'] == 'FINISHED'):
              current_status = 'lobby'
@@ -421,9 +418,7 @@ def handle_replay(data):
     record = GameRecord.query.get(rec_id)
     if not record: return
     
-    # Не меняем статус на watching, остаемся в lobby
     if request.sid in online_users and online_users[request.sid]['status'] != 'playing':
-        # Сбрасываем game_id, если смотрели другую
         online_users[request.sid]['game_id'] = None 
         broadcast_lobby_state()
 
@@ -560,6 +555,11 @@ def handle_pass():
     g['current_state'] = new_state
     g['full_history'].append(new_state)
 
+    # Log pass to chat history
+    move_num = len(g['full_history']) - 1
+    sys_msg = {'user': 'System', 'color': 0, 'text': f"[{move_num}] Пас"}
+    g['chat_history'].append(sys_msg)
+    
     if passes >= 2:
         g['phase'] = 'SCORING'
         g['confirmed_players'] = []
@@ -717,7 +717,6 @@ def handle_leave():
         gid = u.get('game_id')
         if gid:
             leave_room(gid)
-            # Удаляем игрока из зрителей, если он просто смотрел
             if gid in games and u['username'] in games[gid]['spectators']:
                 games[gid]['spectators'].remove(u['username'])
 
@@ -755,7 +754,7 @@ def spectate(data):
     gid = data['game_id']
     if gid in games:
         if online_users[sid]['status'] != 'playing':
-            online_users[sid]['status'] = 'lobby' # Статус всегда Lobby, даже когда смотрит
+            online_users[sid]['status'] = 'lobby' 
             online_users[sid]['game_id'] = gid
         
         leave_room('lobby'); join_room(gid)
