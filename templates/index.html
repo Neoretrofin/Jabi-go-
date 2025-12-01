@@ -518,12 +518,11 @@
         document.getElementById(id).classList.add('active');
         if (id !== 'screen-login') document.getElementById('nav-bar').style.display = 'flex';
         
-        // -- FIX BUTTON VISIBILITY GLOBALLY --
         const btn = document.getElementById('global-return-btn');
-        if (amIPlaying && id !== 'screen-game') {
-             btn.style.display = 'block';
+        if (id === 'screen-game') {
+            btn.style.display = 'none'; 
         } else {
-             btn.style.display = 'none';
+            btn.style.display = amIPlaying ? 'block' : 'none';
         }
 
         if (id === 'screen-lobby') {
@@ -652,12 +651,8 @@
             </tr>`;
         });
         
-        // Force button check in case we are already on a screen
-        const btn = document.getElementById('global-return-btn');
-        if (amIPlaying && !document.getElementById('screen-game').classList.contains('active')) {
-            btn.style.display = 'block';
-        } else {
-            btn.style.display = 'none';
+        if (!document.getElementById('screen-game').classList.contains('active')) {
+            document.getElementById('global-return-btn').style.display = amIPlaying ? 'block' : 'none';
         }
 
         const gt = document.getElementById('game-table'); gt.innerHTML = '';
@@ -844,7 +839,8 @@
         if(replayData && replayData.chat) {
             replayData.chat.forEach(m => {
                  let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
-                 box.innerHTML += `<div class="chat-row"><div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
+                 let moveInfo = m.move !== undefined ? `<span style="color:#999; font-size:0.8em; margin-right:5px;">[${m.move}]</span>` : '';
+                 box.innerHTML += `<div class="chat-row">${moveInfo}<div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
             });
         }
         box.scrollTop = box.scrollHeight;
@@ -939,8 +935,6 @@
     });
 
     function leaveGame() {
-        // Modified to just switch screen, which triggers refresh_lobby
-        // and logic inside showScreen handles button visibility
         if(gameState && gameState.phase==='PLAYING' && (myRole===1||myRole===2)) {
             showScreen('screen-lobby');
             return;
@@ -1099,7 +1093,8 @@
             wait.style.display='none';
         }
         
-        drawGenericBoard(liveCtx, stateToShow, null);
+        // Fix: Use the helper to determine which state to draw (Active or Review)
+        drawGenericBoard(liveCtx, getCurrentRenderState(), null);
     }
 
     // --- DRAWING ---
@@ -1138,8 +1133,16 @@
             }
         }
         
-        // Ghost Stone Logic (SIMPLIFIED for Reliability)
-        if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && state === gameState && myRole === state.current_player) {
+        // Ghost Stone Logic (Corrected Logic)
+        // We only show ghost stone if:
+        // 1. We have hover coords (hoverStone)
+        // 2. Not mobile
+        // 3. Game is playing
+        // 4. It is MY turn
+        // 5. We are viewing the LIVE board (not reviewing history)
+        let isLiveView = (activeReviewIndex === -1);
+        
+        if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && myRole === gameState.current_player && isLiveView) {
             let cx = PADDING + hoverStone.x * CELL_SIZE;
             let cy = PADDING + hoverStone.y * CELL_SIZE;
             ctx.globalAlpha = 0.5;
@@ -1212,8 +1215,14 @@
         
         let stateToDraw = getCurrentRenderState();
         
-        // Only calculate hover if we are actually PLAYING and current state is live state
-        if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && stateToDraw === gameState) {
+        // Logic for Ghost Stone
+        // Only calculate if:
+        // 1. Playing
+        // 2. My turn
+        // 3. Viewing live board (activeReviewIndex === -1)
+        let isLiveView = (activeReviewIndex === -1);
+
+        if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && isLiveView) {
              const c = getBoardCoords(e, liveCanvas);
              if(c.x>=0 && c.x<BOARD_SIZE && c.y>=0 && c.y<BOARD_SIZE) {
                 if(gameState.board[c.y][c.x] === 0) {
@@ -1286,7 +1295,8 @@
     function addChatMsg(m) {
         const box = document.getElementById('chat-msgs');
         let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
-        box.innerHTML += `<div class="chat-row"><div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
+        let moveInfo = m.move !== undefined ? `<span style="color:#999; font-size:0.8em; margin-right:5px;">[${m.move}]</span>` : '';
+        box.innerHTML += `<div class="chat-row">${moveInfo}<div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
         box.scrollTop = box.scrollHeight;
     }
 
