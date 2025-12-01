@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Go Online (Final V24)</title>
+    <title>Go Online (Final V25 Fast)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eceff1; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-tap-highlight-color: transparent; }
@@ -352,14 +352,14 @@
                         </div>
                     </div>
                     
-                    <!-- Immediate Replay Controls (Unified Style) -->
+                    <!-- Immediate Replay Controls -->
                     <div id="immediate-replay-box" style="display:none; text-align:center; margin-top:10px;">
                         <div style="font-size:0.9em; font-weight:bold; margin-bottom:5px;">Обзор партии</div>
                         <div style="display:flex; gap:5px; justify-content:center;">
-                            <button class="btn-gray" onclick="stepActiveReview(-999)">Start</button>
-                            <button class="btn-blue" onclick="stepActiveReview(-1)">Prev</button>
-                            <button class="btn-blue" onclick="stepActiveReview(1)">Next</button>
-                            <button class="btn-gray" onclick="stepActiveReview(999)">End</button>
+                            <button class="btn-gray" style="padding:5px 10px;" onclick="stepActiveReview(-999)">Start</button>
+                            <button class="btn-blue" style="padding:5px 10px;" onclick="stepActiveReview(-1)">Prev</button>
+                            <button class="btn-blue" style="padding:5px 10px;" onclick="stepActiveReview(1)">Next</button>
+                            <button class="btn-gray" style="padding:5px 10px;" onclick="stepActiveReview(999)">End</button>
                         </div>
                     </div>
 
@@ -456,7 +456,11 @@
     </div>
 
 <script>
-    const socket = io();
+    // --- FORCE WEBSOCKETS TO PREVENT LAG ---
+    const socket = io({
+        transports: ['websocket'], 
+        upgrade: false
+    });
     
     let myRole = 0; 
     let gameState = null; 
