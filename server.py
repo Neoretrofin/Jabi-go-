@@ -25,6 +25,7 @@ if database_url and database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'go_game.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Настройка движка БД для работы с Eventlet
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_size": 10,
     "max_overflow": 20,
@@ -86,7 +87,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v29]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v31]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -257,6 +258,8 @@ def handle_login(data):
 
 @socketio.on('refresh_lobby')
 def handle_refresh_lobby():
+    # ИСПРАВЛЕНИЕ: Добавляем запросившего в комнату лобби, даже если он играет
+    join_room('lobby') 
     broadcast_lobby_state()
 
 def broadcast_lobby_state():
