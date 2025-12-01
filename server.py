@@ -87,7 +87,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v31]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v32]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -258,8 +258,7 @@ def handle_login(data):
 
 @socketio.on('refresh_lobby')
 def handle_refresh_lobby():
-    # ИСПРАВЛЕНИЕ: Добавляем запросившего в комнату лобби, даже если он играет
-    join_room('lobby') 
+    join_room('lobby')
     broadcast_lobby_state()
 
 def broadcast_lobby_state():
@@ -557,11 +556,8 @@ def handle_pass():
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state)
-
-    # Log pass to chat history
-    move_num = len(g['full_history']) - 1
-    sys_msg = {'user': 'System', 'color': 0, 'text': f"[{move_num}] Пас"}
-    g['chat_history'].append(sys_msg)
+    
+    # УБРАНО: добавление "Пас" в историю чата как сообщения
     
     if passes >= 2:
         g['phase'] = 'SCORING'
@@ -696,8 +692,23 @@ def handle_msg(data):
     if g['phase'] != 'SETUP':
         if 1 in g['players'] and g['players'][1]['sid'] == sid: color = 1
         elif 2 in g['players'] and g['players'][2]['sid'] == sid: color = 2
-    msg_obj = {'user': u['username'], 'color': color, 'text': data['message']}
+    
+    current_move = len(g['full_history']) - 1
+    msg_obj = {
+        'user': u['username'], 
+        'color': color, 
+        'text': data['message'], 
+        'move': current_move
+    }
     g['chat_history'].append(msg_obj)
+    
+    # Если игра завершена и есть запись в БД, обновляем чат в БД
+    if g.get('db_record_id'):
+        rec = GameRecord.query.get(g['db_record_id'])
+        if rec:
+            rec.chat_json = json.dumps(g['chat_history'])
+            db.session.commit()
+            
     emit('new_message', msg_obj, room=g['id'])
 
 @socketio.on('toggle_dead_stone')
