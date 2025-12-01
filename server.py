@@ -86,7 +86,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v32]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v31]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -212,6 +212,7 @@ def handle_login(data):
     join_room('lobby')
     emit('login_success', {'username': user.username, 'elo': user.elo})
     
+    # Реконнект
     active_gid = None
     for gid, g in games.items():
         if g['phase'] != 'FINISHED':
@@ -256,7 +257,7 @@ def handle_login(data):
 
 @socketio.on('refresh_lobby')
 def handle_refresh_lobby():
-    join_room('lobby')
+    join_room('lobby') 
     broadcast_lobby_state()
 
 def broadcast_lobby_state():
@@ -300,6 +301,7 @@ def broadcast_lobby_state():
 
     emit('lobby_update', {'users': users_list, 'games': active_games, 'finished': finished_list}, room='lobby')
 
+# --- LEADERBOARD ---
 @socketio.on('get_leaderboard')
 def handle_get_leaderboard():
     users_db = User.query.order_by(User.elo.desc()).limit(100).all()
@@ -315,6 +317,7 @@ def handle_get_leaderboard():
         })
     emit('leaderboard_data', lb_data)
 
+# --- TOOLTIP ---
 @socketio.on('get_tooltip_data')
 def handle_tooltip_request(data):
     target_username = data.get('username')
@@ -328,6 +331,7 @@ def handle_tooltip_request(data):
             'avatar': user.avatar
         })
 
+# --- PROFILE ---
 @socketio.on('get_profile')
 def handle_get_profile(data):
     target_username = data.get('username')
@@ -392,6 +396,7 @@ def handle_avatar_upload(data):
     emit('server_notification', {'msg': 'Аватар обновлен!'})
     handle_get_profile({'username': u['username']})
 
+# --- HISTORY & REPLAY ---
 @socketio.on('get_all_history')
 def handle_get_history():
     records = GameRecord.query.order_by(GameRecord.date.desc()).limit(50).all()
@@ -436,6 +441,7 @@ def handle_replay(data):
         'chat': chat
     })
 
+# --- GAME SETUP ---
 @socketio.on('send_challenge')
 def handle_challenge_req(data):
     target_sid = data['target_sid']
@@ -502,6 +508,7 @@ def handle_pick_color(data):
     emit('update_game', sanitize_game(g), room=g['id'])
     broadcast_lobby_state()
 
+# --- GAMEPLAY ---
 def get_game_and_role(sid):
     u = online_users.get(sid)
     if not u or not u['game_id']: return None, None
@@ -548,6 +555,8 @@ def handle_pass():
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state)
+
+    # NO MORE SYSTEM MESSAGE IN CHAT FOR PASS
 
     if passes >= 2:
         g['phase'] = 'SCORING'
@@ -648,7 +657,6 @@ def finish_match_logic(g, winner_color, is_resign=False, diff=0):
         (2 if winner_color == 1 else 1): l_user.elo
     }
     g['is_resign'] = is_resign
-    
     g['current_state']['dead_stones'] = []
 
     record = GameRecord(
@@ -683,24 +691,24 @@ def handle_msg(data):
         if 1 in g['players'] and g['players'][1]['sid'] == sid: color = 1
         elif 2 in g['players'] and g['players'][2]['sid'] == sid: color = 2
     
-    # Если игра идет, берем текущий ход. Если нет - просто -1 или последний.
-    current_move = len(g['full_history']) - 1
-    
+    # Add Move Number
+    move_num = len(g['full_history']) - 1
     msg_obj = {
         'user': u['username'], 
         'color': color, 
-        'text': data['message'], 
-        'move': current_move
+        'text': data['message'],
+        'move': move_num
     }
+    
     g['chat_history'].append(msg_obj)
     
-    # Обновляем БД, если игра сохранена
-    if g.get('db_record_id'):
+    # If Game is Finished, update DB Record
+    if g['phase'] == 'FINISHED' and g.get('db_record_id'):
         rec = GameRecord.query.get(g['db_record_id'])
         if rec:
             rec.chat_json = json.dumps(g['chat_history'])
             db.session.commit()
-            
+
     emit('new_message', msg_obj, room=g['id'])
 
 @socketio.on('toggle_dead_stone')
