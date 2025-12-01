@@ -6,18 +6,14 @@
     <title>Jabi Go 🐸</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
+        /* Стили остаются прежними, без изменений */
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eceff1; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-tap-highlight-color: transparent; }
-        
         .screen { display: none; width: 100%; height: 100%; align-items: center; justify-content: flex-start; flex-direction: column; overflow-y: auto; padding-bottom: 50px; }
         .active { display: flex; }
         h2 { color: #37474f; margin-top: 20px; text-align: center; }
-
-        /* Навигация */
         #nav-bar { width: 95%; max-width: 1100px; display: none; justify-content: flex-end; padding: 10px 0; gap: 15px;}
         .nav-link { cursor: pointer; font-weight: bold; color: #546e7a; text-decoration: none; padding: 5px; }
         .nav-link:hover { color: #26a69a; }
-
-        /* Логин */
         #login-box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 300px; text-align: center; margin-top: 10vh; }
         input { padding: 10px; width: 90%; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; font-size: 16px; }
         button { padding: 12px; width: 100%; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 5px; color: white; transition: 0.2s; font-size: 16px; }
@@ -27,11 +23,8 @@
         .btn-gray { background: #78909c; } .btn-gray:hover { background: #546e7a; }
         .btn-orange { background: #fb8c00; } .btn-orange:hover { background: #f57c00; }
         .login-note { font-size: 0.8em; color: #78909c; margin-top: 15px; }
-
-        /* Лобби */
         #lobby-container { width: 95%; max-width: 1100px; display: flex; gap: 20px; margin-bottom: 20px; }
         .lobby-panel { background: white; flex: 1; border-radius: 8px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); display:flex; flex-direction:column; overflow-x: auto; }
-        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 300px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.95em; white-space: nowrap; }
         th { color: #78909c; font-size: 0.85em; text-transform: uppercase; }
@@ -42,11 +35,8 @@
         .row-loss { border-left-color: #ef5350; background: #ffebee; }
         .status-lobby { color: #4caf50; font-weight: bold; }
         .status-playing { color: #ff9800; }
-        .status-watching { color: #7e57c2; }
         .action-btn { padding: 4px 10px; font-size: 0.8em; width: auto; margin: 0; }
         .link-btn { background:none; border:none; color:#1e88e5; cursor:pointer; padding:0; text-decoration:underline; font-size:0.9em; width:auto; text-align:left;}
-
-        /* Профиль */
         #screen-profile { justify-content: center; } 
         #profile-container { width: 95%; max-width: 800px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
         .profile-header { display: flex; gap: 30px; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
@@ -55,25 +45,19 @@
         .upload-label { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.5); color: white; font-size: 0.7em; text-align: center; cursor: pointer; padding: 3px 0; display: none; }
         .avatar-box:hover .upload-label { display: block; }
         .stat-val { font-size: 1.2em; font-weight: bold; color: #37474f; }
-        
-        /* Leaderboard */
         #screen-leaderboard { justify-content: flex-start; padding-top: 20px; }
         #leaderboard-container { width: 95%; max-width: 900px; background: white; border-radius: 8px; padding: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow-x: auto; }
         .lb-rank { font-weight: bold; color: #555; }
         .lb-avatar { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; border: 1px solid #ccc; }
         .lb-win { color: #2e7d32; font-weight: bold; }
         .lb-loss { color: #c62828; font-weight: bold; }
-
-        /* Игра / Реплей (PC) */
         #game-layout { display: flex; gap: 20px; justify-content: center; width: 100%; max-width: 1100px; height: 700px; }
         #canvas-wrapper { position: relative; box-shadow: 0 10px 20px rgba(0,0,0,0.3); border-radius: 4px; background: #DCB35C; padding: 0; height: 700px; width: 700px; flex-shrink: 0; display:flex; flex-direction:column; }
         canvas { display: block; width: 700px; height: 700px; cursor: pointer; }
-
         #side-panel { width: 350px; display: flex; flex-direction: column; gap: 10px; height: 700px; flex: 1; overflow: hidden; }
         #info-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); flex-shrink: 0; }
         #chat-box { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; flex: 1; min-height: 0; }
         #chat-msgs, #replay-chat { flex: 1; overflow-y: auto; border-bottom: 1px solid #eee; margin-bottom: 10px; font-size: 0.9em; word-wrap: break-word; }
-
         .players-container { display: flex; flex-direction: row; justify-content: space-around; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
         .player-block { display: flex; flex-direction: column; align-items: center; width: 45%; }
         .player-header-row { width: 100%; display: flex; justify-content: center; gap: 5px; font-weight: bold; margin-bottom: 5px; font-size: 0.9em; color: #333; text-align:center; flex-wrap: wrap;}
@@ -81,68 +65,47 @@
         .pris-label { font-size: 0.85em; color: #555; margin-top: 2px; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .turn-indic { padding: 8px; text-align: center; border-radius: 4px; margin-bottom: 10px; font-weight: bold; background: #eee; color: #333; border: 1px solid #ddd;}
         .check-ok { color: #26a69a; font-weight: bold; margin-left: 5px; font-size: 1.2em; }
-        
         .result-win { background-color: #e8f5e9 !important; color: #2e7d32; border: none; } 
         .result-loss { background-color: #ffebee !important; color: #c62828; border: none; } 
-
         .elo-msg { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 0.9em; }
         .elo-msg-win { color: #2e7d32; }
         .elo-msg-loss { color: #c62828; }
-
         .chat-row { margin-bottom: 4px; display: flex; align-items: flex-start;}
         .stone-icon { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-top: 3px; margin-right: 5px; }
         .stone-icon.black { background: #000; border: 1px solid #000; }
         .stone-icon.white { background: #fff; border: 1px solid #ccc; }
         .stone-icon.spec { background: #ccc; border: 1px solid #999; }
-        
         #sound-control { margin-top: 10px; font-size: 0.8em; color: #666; display: flex; align-items: center; gap: 5px; }
         #vol-slider { flex: 1; cursor: pointer; }
-
         #user-tooltip { display: none; position: fixed; background: white; border: 1px solid #ccc; border-radius: 4px; padding: 10px; box-shadow: 0 5px 10px rgba(0,0,0,0.2); z-index: 2000; font-size: 0.9em; pointer-events: none; }
         .tooltip-img { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; margin-right: 10px; }
         .tooltip-content { display: flex; align-items: center; }
-
         #modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal-box { background: white; padding: 25px; border-radius: 8px; text-align: center; width: 90%; max-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
         .modal-btn-row { display:flex; gap:10px; margin-top:20px; justify-content:center; }
-        
         #global-return-btn { position: fixed; bottom: 20px; left: 20px; z-index: 3000; display: none; box-shadow: 0 5px 15px rgba(0,0,0,0.3); padding: 12px 25px; font-size: 1em; border-radius: 30px; }
-        
         #confirm-move-btn { display:none; width: 100%; padding: 15px; font-size: 1.1em; margin-bottom: 10px; background: #26a69a; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
-
-        /* Replay Header Layout */
         .replay-header { margin-bottom:10px; width:100%; max-width:900px; position: relative; display: flex; align-items: center; justify-content: center; min-height: 40px; }
         .replay-back-btn { position: absolute; left: 0; width:auto; padding:8px 20px; }
         .replay-title-text { font-weight:bold; font-size:1.3em; color:#37474f; text-align: center; }
-
-        /* PC Move Count (under board) */
         #pc-move-count { margin-top: 5px; text-align: center; font-size: 0.9em; color: #555; }
         #mobile-move-count { text-align:center; font-size:0.85em; color:#777; margin-bottom:10px; display: none; }
 
-        /* --- MEDIA QUERIES FOR MOBILE --- */
         @media (max-width: 900px) {
             #lobby-container { flex-direction: column; }
             #game-layout { flex-direction: column; align-items: center; height: auto; }
-            
             #canvas-wrapper { width: 100%; max-width: 600px; height: auto; order: 1; display:flex; justify-content:center; aspect-ratio: 1/1; margin-bottom: 10px; }
             canvas { width: 100% !important; height: 100% !important; }
-            
             #confirm-move-btn { order: 2; width: 95%; max-width: 600px; margin: 0 auto 10px auto; }
             #side-panel { width: 100%; max-width: 600px; order: 3; height: auto; overflow: visible; }
-            
             #nav-bar { justify-content: center; }
             .nav-link { font-size: 0.9em; }
-            
             h2 { font-size: 1.5em; }
             .big-avatar { width: 60px; height: 60px; }
-            
             #global-return-btn { bottom: 10px; left: 50%; transform: translateX(-50%); width: 80%; text-align: center; }
-            
             #chat-box { min-height: 300px; } 
-            
             .replay-header { flex-direction: column; gap: 10px; }
             .replay-back-btn { position: static; width: 100%; }
-
             #pc-move-count { display: none; }
             #mobile-move-count { display: block; }
         }
@@ -156,7 +119,6 @@
 
     <!-- Generic Modals -->
     <div id="modal-overlay">
-        <!-- Color Pick -->
         <div id="modal-setup" class="modal-box" style="display:none;">
             <h3>Выберите цвет</h3>
             <p>Ваша партия начинается. За кого будете играть?</p>
@@ -165,7 +127,6 @@
                 <button class="btn-green" style="background:#fff; color:#000; border:1px solid #ccc;" onclick="pickColor(2)">Белые</button>
             </div>
         </div>
-        <!-- Challenge -->
         <div id="modal-challenge" class="modal-box" style="display:none;">
             <h3>Вас вызывает!</h3>
             <p id="challenge-text"></p>
@@ -174,7 +135,6 @@
                 <button class="btn-red" onclick="respondChallenge(false)">Отказать</button>
             </div>
         </div>
-        <!-- Undo -->
         <div id="modal-undo" class="modal-box" style="display:none;">
             <h3>Запрос возврата</h3>
             <p id="undo-text"></p>
@@ -183,7 +143,6 @@
                 <button class="btn-red" onclick="respondUndo(false)">Отказать</button>
             </div>
         </div>
-        <!-- Generic Alert -->
         <div id="modal-alert" class="modal-box" style="display:none;">
             <h3 id="alert-title">Внимание</h3>
             <p id="alert-text"></p>
@@ -191,7 +150,6 @@
                 <button class="btn-blue" onclick="closeModal()">OK</button>
             </div>
         </div>
-        <!-- Generic Confirm -->
         <div id="modal-confirm" class="modal-box" style="display:none;">
             <h3 id="confirm-title">Подтверждение</h3>
             <p id="confirm-text"></p>
@@ -209,6 +167,8 @@
         <span class="nav-link" onclick="logout()" style="color:#ef5350;">Выход</span>
     </div>
 
+    <!-- ... Screens Login, Lobby, Profile, Leaderboard are same ... -->
+    
     <div id="screen-login" class="screen active">
         <div id="login-box">
             <h2>Jabi Go 🐸</h2>
@@ -299,23 +259,19 @@
     <div id="screen-game" class="screen">
         <div style="margin-bottom:10px; width:100%; max-width:900px; display:flex; align-items:center; justify-content:space-between;">
             <button class="btn-red" style="width:auto; padding:8px 20px;" onclick="leaveGame()">◀ Вернуться в Лобби</button>
-            <!-- Game Title Hidden in Active Game -->
             <span id="game-title" style="font-weight:bold; color:#555; text-align:right; display:none;"></span>
         </div>
         <div id="game-layout">
             <div id="canvas-wrapper">
                 <canvas id="goBoard" width="700" height="700"></canvas>
-                <!-- PC Move Count -->
                 <div id="pc-move-count">Ход: 0</div>
             </div>
             
-            <!-- Mobile Confirm Button -->
             <button id="confirm-move-btn" onclick="submitMobileMove()">Подтвердить ход</button>
 
             <div id="side-panel">
                 <div id="info-box">
                     <div id="turn-display" class="turn-indic">Ход...</div>
-                    <!-- Mobile Move Count -->
                     <div id="mobile-move-count">Ход №0</div>
                     
                     <div class="players-container">
@@ -351,14 +307,13 @@
                         </div>
                     </div>
                     
-                    <!-- Immediate Replay Controls -->
                     <div id="immediate-replay-box" style="display:none; text-align:center; margin-top:10px;">
                         <div style="font-size:0.9em; font-weight:bold; margin-bottom:5px;">Обзор партии</div>
                         <div style="display:flex; gap:5px; justify-content:center;">
-                            <button class="btn-gray" style="padding:5px 10px;" onclick="stepActiveReview(-999)">Start</button>
-                            <button class="btn-blue" style="padding:5px 10px;" onclick="stepActiveReview(-1)">Prev</button>
-                            <button class="btn-blue" style="padding:5px 10px;" onclick="stepActiveReview(1)">Next</button>
-                            <button class="btn-gray" style="padding:5px 10px;" onclick="stepActiveReview(999)">End</button>
+                            <button class="btn-gray" onclick="stepActiveReview(-999)">Start</button>
+                            <button class="btn-blue" onclick="stepActiveReview(-1)">Prev</button>
+                            <button class="btn-blue" onclick="stepActiveReview(1)">Next</button>
+                            <button class="btn-gray" onclick="stepActiveReview(999)">End</button>
                         </div>
                     </div>
 
@@ -471,10 +426,7 @@
     let prevPasses = 0;
     let amIPlaying = false; 
     
-    // Mobile Move Logic
     let tentativeMove = null; 
-    
-    // Immediate Review
     let activeReviewIndex = -1;
 
     const moveSound = new Audio('/stone.mp3');
@@ -651,8 +603,11 @@
             </tr>`;
         });
         
-        if (!document.getElementById('screen-game').classList.contains('active')) {
-            document.getElementById('global-return-btn').style.display = amIPlaying ? 'block' : 'none';
+        const btn = document.getElementById('global-return-btn');
+        if (amIPlaying && !document.getElementById('screen-game').classList.contains('active')) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
         }
 
         const gt = document.getElementById('game-table'); gt.innerHTML = '';
@@ -682,7 +637,6 @@
         });
     });
 
-    // --- LEADERBOARD ---
     function openLeaderboard() {
         socket.emit('get_leaderboard');
         showScreen('screen-leaderboard');
@@ -707,7 +661,6 @@
         });
     });
 
-    // --- PROFILE ---
     function openProfile(targetUser) {
         if(!targetUser) targetUser = document.getElementById('my-username').innerText;
         socket.emit('get_profile', {username: targetUser});
@@ -765,10 +718,8 @@
         list.forEach(g => {
             const localTime = formatTimeLocal(g.date);
             const fullDate = new Date(g.date).toLocaleDateString() + ' ' + localTime;
-            
             let p1Name = g.p_black + (g.winner_color === 1 ? ' 🏆' : '');
             let p2Name = g.p_white + (g.winner_color === 2 ? ' 🏆' : '');
-
             t.innerHTML += `<tr class="clickable-row" onclick="loadReplay(${g.id})">
                 <td title="${fullDate}">${new Date(g.date).toLocaleDateString()} ${localTime}</td>
                 <td><span class="clickable-name" onclick="event.stopPropagation(); openProfile('${g.p_black}')" onmousemove="showTooltip(event, '${g.p_black}')" onmouseleave="hideTooltip()">${p1Name}</span> vs <span class="clickable-name" onclick="event.stopPropagation(); openProfile('${g.p_white}')" onmousemove="showTooltip(event, '${g.p_white}')" onmouseleave="hideTooltip()">${p2Name}</span></td>
@@ -777,7 +728,6 @@
         });
     });
 
-    // --- REPLAY ---
     function loadReplay(id) {
         socket.emit('get_replay_data', {record_id: id});
     }
@@ -785,30 +735,17 @@
         replayData = d;
         replayIndex = d.states.length > 0 ? d.states.length - 1 : 0;
         let fmtResult = d.result.replace(' (', ', ').replace(')', '');
-        
         let p1Name = d.p_black;
         let p2Name = d.p_white;
-        
         if (d.winner_color === 1) p1Name += ' 🏆';
         if (d.winner_color === 2) p2Name += ' 🏆';
-
         document.getElementById('replay-title').innerText = `${p1Name} vs ${p2Name} (${fmtResult})`;
-        
-        const nB = document.getElementById('rep-name-b');
-        nB.innerText = p1Name;
-        nB.onclick = () => openProfile(d.p_black); 
-        nB.onmousemove = (e) => showTooltip(e, d.p_black);
-        nB.onmouseleave = () => hideTooltip();
-
-        const nW = document.getElementById('rep-name-w');
-        nW.innerText = p2Name;
-        nW.onclick = () => openProfile(d.p_white);
-        nW.onmousemove = (e) => showTooltip(e, d.p_white);
-        nW.onmouseleave = () => hideTooltip();
-
+        document.getElementById('rep-name-b').innerText = p1Name;
+        document.getElementById('rep-name-b').onclick = () => openProfile(d.p_black); 
+        document.getElementById('rep-name-w').innerText = p2Name;
+        document.getElementById('rep-name-w').onclick = () => openProfile(d.p_white);
         document.getElementById('rep-av-b').src = d.av_black || DEF_AVATAR;
         document.getElementById('rep-av-w').src = d.av_white || DEF_AVATAR;
-
         renderReplay();
         renderReplayChat();
         showScreen('screen-replay');
@@ -852,7 +789,7 @@
         replayData = null; 
     }
 
-    // --- GAME ---
+    // --- GAME LOGIC ---
     function sendChallenge(sid) { socket.emit('send_challenge', {target_sid: sid}); showAlert("Вызов отправлен..."); }
     let currentChallengeSid = null;
     socket.on('incoming_challenge', d => {
@@ -872,12 +809,9 @@
     function spectate(gid) { socket.emit('spectate_game', {game_id: gid}); }
     
     socket.on('game_start', d => {
-        // --- SPA: NO RELOAD ---
         gameState = d.state; myRole = d.role; prevLastMove = null; prevPasses = 0;
-        tentativeMove = null;
-        activeReviewIndex = -1;
+        tentativeMove = null; activeReviewIndex = -1;
         document.getElementById('confirm-move-btn').style.display = 'none';
-        
         document.getElementById('chat-msgs').innerHTML = '';
         d.state.chat_history.forEach(addChatMsg);
         showScreen('screen-game');
@@ -887,40 +821,26 @@
     function pickColor(c) { socket.emit('setup_pick_color', {color: c}); }
 
     socket.on('update_game', s => { 
+        // Sounds
         if (s.last_move && (!prevLastMove || s.last_move.x !== prevLastMove.x || s.last_move.y !== prevLastMove.y)) {
-            moveSound.currentTime = 0;
-            moveSound.play().catch(e => console.log(e));
+            moveSound.currentTime = 0; moveSound.play().catch(e => {});
         }
-        
         if (gameState && s.prisoners) {
-            let diffB = s.prisoners[1] - gameState.prisoners[1];
-            let diffW = s.prisoners[2] - gameState.prisoners[2];
-            if (diffB > 0 || diffW > 0) {
-                eatSound.currentTime = 0;
-                eatSound.play().catch(e => console.log(e));
+            if ((s.prisoners[1] - gameState.prisoners[1] > 0) || (s.prisoners[2] - gameState.prisoners[2] > 0)) {
+                eatSound.currentTime = 0; eatSound.play().catch(e => {});
             }
         }
-        
         if (s.phase === 'FINISHED' && s.is_resign) {
-            dingSound.currentTime = 0;
-            dingSound.play().catch(e => console.log(e));
+            dingSound.currentTime = 0; dingSound.play().catch(e => {});
         }
-        
-        if (s.consecutive_passes > prevPasses) {
-            if (s.phase !== 'FINISHED') {
-                dingSound.currentTime = 0;
-                dingSound.play().catch(e => console.log(e));
-                if (myRole !== 0 && s.current_player === myRole) {
-                    showAlert("Оппонент нажал пас!");
-                }
-            }
+        if (s.consecutive_passes > prevPasses && s.phase !== 'FINISHED') {
+            dingSound.currentTime = 0; dingSound.play().catch(e => {});
+            if (myRole !== 0 && s.current_player === myRole) showAlert("Оппонент нажал пас!");
         }
         prevPasses = s.consecutive_passes;
         prevLastMove = s.last_move;
-        
         tentativeMove = null;
         document.getElementById('confirm-move-btn').style.display = 'none';
-
         gameState = s; 
         updateGameUI(); 
     });
@@ -950,17 +870,13 @@
     
     function stepActiveReview(delta) {
         if(!gameState || gameState.phase !== 'FINISHED') return;
-        
         if(activeReviewIndex === -1) activeReviewIndex = gameState.full_history.length - 1;
-        
         activeReviewIndex += delta;
         if(activeReviewIndex < 0) activeReviewIndex = 0;
         if(activeReviewIndex >= gameState.full_history.length) activeReviewIndex = gameState.full_history.length - 1;
-        
         updateGameUI();
     }
 
-    // Helper: Convert X,Y to Go coordinates (e.g. 0,0 -> A13)
     function getGoCoords(x, y) {
         const letters = "ABCDEFGHJKLMNOPQRST";
         if (x < 0 || x >= 13) return "?";
@@ -971,17 +887,11 @@
 
     function updateGameUI() {
         const p1 = gameState.players_info[1], p2 = gameState.players_info[2];
-        
+        // Update Names/Avatars
         const nb = document.querySelector('.player-block:nth-child(1) .clickable-name');
         nb.innerText = p1.name; nb.onclick = () => openProfile(p1.name);
-        nb.onmousemove = (e) => showTooltip(e, p1.name);
-        nb.onmouseleave = () => hideTooltip();
-        
         const nw = document.querySelector('.player-block:nth-child(2) .clickable-name');
         nw.innerText = p2.name; nw.onclick = () => openProfile(p2.name);
-        nw.onmousemove = (e) => showTooltip(e, p2.name);
-        nw.onmouseleave = () => hideTooltip();
-
         document.getElementById('av-b').src = p1.avatar || DEF_AVATAR;
         document.getElementById('av-w').src = p2.avatar || DEF_AVATAR;
         
@@ -1017,7 +927,6 @@
         
         let mCount = isReview ? activeReviewIndex : gameState.move_count;
         let moveText = `Ход: ${mCount}`;
-        
         if (mCount > 0) {
             const relevantState = isReview ? gameState.full_history[mCount] : gameState;
             if (relevantState.last_move) {
@@ -1026,17 +935,14 @@
                 moveText += `, Пас`;
             }
         }
-
         document.getElementById('pc-move-count').innerText = moveText;
         document.getElementById('mobile-move-count').innerText = moveText;
-
         document.getElementById('game-title').style.display = 'none';
 
         if (gameState.phase === 'FINISHED' && gameState.result_text) {
              turnDiv.innerText = `Игра окончена ${gameState.result_text}`;
              dlArea.style.display = 'block';
              reviewBox.style.display = 'block';
-             
              let isWin = false;
              if (myRole !== 0) {
                  isWin = (myRole === gameState.winner_color);
@@ -1057,17 +963,15 @@
         
         const bPlay = document.getElementById('play-btns'), bScore = document.getElementById('score-btns');
         bPlay.style.display='none'; bScore.style.display='none';
-        
-        let scoreDiv = document.getElementById('scoring-details');
-        scoreDiv.style.display = 'none';
+        document.getElementById('scoring-details').style.display = 'none';
 
         if (myRole===1 || myRole===2) {
             if(gameState.phase==='PLAYING') bPlay.style.display='block';
             else if(gameState.phase==='SCORING') {
                 bScore.style.display='block';
                 const scoreData = calcScoreGeneric(gameState.board, gameState.prisoners, gameState.dead_stones);
-                scoreDiv.style.display = 'block';
-                scoreDiv.innerHTML = `
+                document.getElementById('scoring-details').style.display = 'block';
+                document.getElementById('scoring-details').innerHTML = `
                     <div style="font-weight:bold; margin-bottom:5px;">Предварительный счёт:</div>
                     <div>● Ч: <b>${scoreData.b_details.total}</b> (Т:${scoreData.b_details.terr})</div>
                     <div>○ Б: <b>${scoreData.w_details.total}</b> (Т:${scoreData.w_details.terr})</div>
@@ -1078,28 +982,25 @@
             }
         }
         
-        const setupModal = document.getElementById('modal-setup');
         const wait = document.getElementById('wait-msg');
-        
         if(gameState.phase==='SETUP') {
-             if(myRole==='challenger') {
-                 openModal('modal-setup');
-             } else {
-                 closeModal();
-             }
+             if(myRole==='challenger') openModal('modal-setup'); else closeModal();
             wait.style.display = (myRole==='opponent') ? 'block' : 'none';
             if(myRole==='opponent') wait.innerText = "Соперник выбирает цвет...";
         } else {
             wait.style.display='none';
         }
         
-        // Fix: Use the helper to determine which state to draw (Active or Review)
-        drawGenericBoard(liveCtx, getCurrentRenderState(), null);
+        drawGenericBoard(liveCtx, stateToShow, null);
     }
 
-    // --- DRAWING ---
+    // --- DRAWING (ROBUST VERSION) ---
     function drawGenericBoard(ctx, state, terrMap) {
-        ctx.fillStyle = '#DCB35C'; ctx.fillRect(0, 0, 700, 700);
+        // Ensure ctx is valid, but also ensure we try to draw even if state is missing partial data
+        if(!ctx) return;
+
+        ctx.fillStyle = '#DCB35C'; 
+        ctx.fillRect(0, 0, 700, 700);
         ctx.fillStyle = '#000'; ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
         const L = "ABCDEFGHJKLMNOPQRST";
@@ -1113,10 +1014,12 @@
             ctx.fillText(char, p, PADDING - offset); ctx.fillText(char, p, PADDING + boardPixelSize + offset);
             ctx.fillText(num, PADDING - offset, p); ctx.fillText(num, PADDING + boardPixelSize + offset, p);
         }
+        // Star points
         ctx.fillStyle = '#000';
         [3,9,6].forEach(x=>[3,9,6].forEach(y=>{ctx.beginPath(); ctx.arc(PADDING+x*CELL_SIZE, PADDING+y*CELL_SIZE, 3, 0, Math.PI*2); ctx.fill();}));
 
-        if(!state) return;
+        // SAFETY CHECK: If state or board is missing, stop here (after drawing grid)
+        if(!state || !state.board) return;
 
         for(let y=0; y<BOARD_SIZE; y++){
             for(let x=0; x<BOARD_SIZE; x++){
@@ -1127,21 +1030,20 @@
                     ctx.fillStyle = (terrMap[y][x] === 1) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.7)';
                     ctx.fillRect(cx - 8, cy - 8, 16, 16);
                 }
-                let c = state.board[y][x];
-                if(c!==0) drawStone(ctx, x, y, c);
+                
+                // Safe Access
+                if(state.board[y] && state.board[y][x] !== undefined) {
+                    let c = state.board[y][x];
+                    if(c!==0) drawStone(ctx, x, y, c);
+                }
+                
                 if(state.dead_stones && state.dead_stones.includes(`${x},${y}`)) drawDeadMark(ctx, x, y);
             }
         }
         
-        // Ghost Stone Logic (Corrected Logic)
-        // We only show ghost stone if:
-        // 1. We have hover coords (hoverStone)
-        // 2. Not mobile
-        // 3. Game is playing
-        // 4. It is MY turn
-        // 5. We are viewing the LIVE board (not reviewing history)
+        // Ghost Stone (Logic Fixed)
+        // Draw if: I am active player, it is playing phase, and I am looking at LIVE board
         let isLiveView = (activeReviewIndex === -1);
-        
         if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && myRole === gameState.current_player && isLiveView) {
             let cx = PADDING + hoverStone.x * CELL_SIZE;
             let cy = PADDING + hoverStone.y * CELL_SIZE;
@@ -1150,7 +1052,6 @@
             ctx.globalAlpha = 1.0;
         }
 
-        // Tentative Stone (Mobile)
         if(tentativeMove && isMobile() && gameState.phase === 'PLAYING') {
             let cx = PADDING + tentativeMove.x * CELL_SIZE;
             let cy = PADDING + tentativeMove.y * CELL_SIZE;
@@ -1164,9 +1065,9 @@
         if(state.last_move) {
             let lm = state.last_move;
             let cx = PADDING+lm.x*CELL_SIZE, cy = PADDING+lm.y*CELL_SIZE;
-            let col = state.board[lm.y][lm.x];
-            if (col !== 0) {
-                ctx.strokeStyle = (col===1)?'white':'black'; ctx.lineWidth=2; 
+            // Safe access for last move stone check
+            if(state.board[lm.y] && state.board[lm.y][lm.x] !== 0) {
+                ctx.strokeStyle = (state.board[lm.y][lm.x]===1)?'white':'black'; ctx.lineWidth=2; 
                 ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.stroke(); 
                 ctx.lineWidth=1; ctx.strokeStyle='#000';
             }
@@ -1185,119 +1086,6 @@
         let cx=PADDING+x*CELL_SIZE, cy=PADDING+y*CELL_SIZE;
         ctx.strokeStyle='red'; ctx.lineWidth=3;
         ctx.beginPath(); ctx.moveTo(cx-10, cy-10); ctx.lineTo(cx+10, cy+10); ctx.moveTo(cx+10, cy-10); ctx.lineTo(cx-10, cy+10); ctx.stroke(); ctx.lineWidth=1;
-    }
-
-    liveCanvas.addEventListener('mouseleave', () => {
-        if(!isMobile()) hoverStone = null;
-        let map = null;
-        if(gameState && gameState.phase === 'SCORING') {
-            const r = calcScoreGeneric(gameState.board, gameState.prisoners, gameState.dead_stones);
-            map = r.map;
-        }
-        
-        let stateToDraw = getCurrentRenderState();
-        if(stateToDraw) drawGenericBoard(liveCtx, stateToDraw, map);
-    });
-
-    function getBoardCoords(e, canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        
-        const x = Math.round(((e.clientX - rect.left) * scaleX - PADDING)/CELL_SIZE);
-        const y = Math.round(((e.clientY - rect.top) * scaleY - PADDING)/CELL_SIZE);
-        return {x, y};
-    }
-
-    liveCanvas.addEventListener('mousemove', e => {
-        if(isMobile()) return; 
-        if(!gameState) return;
-        
-        let stateToDraw = getCurrentRenderState();
-        
-        // Logic for Ghost Stone
-        // Only calculate if:
-        // 1. Playing
-        // 2. My turn
-        // 3. Viewing live board (activeReviewIndex === -1)
-        let isLiveView = (activeReviewIndex === -1);
-
-        if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && isLiveView) {
-             const c = getBoardCoords(e, liveCanvas);
-             if(c.x>=0 && c.x<BOARD_SIZE && c.y>=0 && c.y<BOARD_SIZE) {
-                if(gameState.board[c.y][c.x] === 0) {
-                    hoverStone = {x: c.x, y: c.y};
-                } else {
-                    hoverStone = null;
-                }
-            } else {
-                hoverStone = null;
-            }
-        } else {
-            hoverStone = null;
-        }
-        
-        drawGenericBoard(liveCtx, stateToDraw, null);
-    });
-
-    liveCanvas.addEventListener('click', e => {
-        if(!gameState) return;
-        const c = getBoardCoords(e, liveCanvas);
-        
-        if(c.x<0||c.x>=BOARD_SIZE||c.y<0||c.y>=BOARD_SIZE) return;
-        
-        if(gameState.phase==='PLAYING') {
-            if(myRole!==gameState.current_player) return;
-            
-            if(isMobile()) {
-                if(gameState.board[c.y][c.x] === 0) {
-                    tentativeMove = {x: c.x, y: c.y};
-                    document.getElementById('confirm-move-btn').style.display = 'block';
-                    drawGenericBoard(liveCtx, gameState, null);
-                }
-            } else {
-                tryMove(c.x, c.y);
-            }
-
-        } else if(gameState.phase==='SCORING' && (myRole===1||myRole===2)) {
-            socket.emit('toggle_dead_stone', {key: `${c.x},${c.y}`});
-        }
-    });
-
-    function submitMobileMove() {
-        if(tentativeMove) {
-            tryMove(tentativeMove.x, tentativeMove.y);
-        }
-    }
-
-    function tryMove(x, y) {
-        if(gameState.board[y][x]!==0) return;
-        let newB = gameState.board.map(r=>[...r]); newB[y][x]=myRole;
-        let caps = getCaptures(newB, x, y, myRole);
-        if(getLiberties(newB, x, y, myRole)===0 && caps.length===0) return showAlert("Суицид запрещен!");
-        if(gameState.ko_position && gameState.ko_position.x===x && gameState.ko_position.y===y) return showAlert("Правило КО!");
-        caps.forEach(p=>newB[p.y][p.x]=0);
-        let newPris={...gameState.prisoners}; newPris[myRole]+=caps.length;
-        let ko=null; if(caps.length===1 && getLiberties(newB, x, y, myRole)===1 && getGroup(newB, x, y, myRole).length===1) ko={x:caps[0].x,y:caps[0].y};
-        socket.emit('make_move', {board: newB, prisoners: newPris, ko: ko, move_x: x, move_y: y});
-    }
-
-    function sendPass() { socket.emit('pass_move'); }
-    function sendResign() { showConfirm("Вы действительно хотите сдаться?", () => socket.emit('resign')); }
-    function resumeGame() { socket.emit('resume_game'); }
-    function confirmScore() { 
-        let r = calcScoreGeneric(gameState.board, gameState.prisoners, gameState.dead_stones); 
-        socket.emit('confirm_score', {winner_color:r.win, diff:r.diff}); 
-    }
-
-    function sendChat() { const i=document.getElementById('chat-input'); if(i.value.trim()){socket.emit('send_message',{message:i.value}); i.value='';} }
-    socket.on('new_message', m => addChatMsg(m));
-    function addChatMsg(m) {
-        const box = document.getElementById('chat-msgs');
-        let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
-        let moveInfo = m.move !== undefined ? `<span style="color:#999; font-size:0.8em; margin-right:5px;">[${m.move}]</span>` : '';
-        box.innerHTML += `<div class="chat-row">${moveInfo}<div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
-        box.scrollTop = box.scrollHeight;
     }
 
     function getCaptures(b,x,y,c){let o=c===1?2:1,caps=[];[{x:x+1,y:y},{x:x-1,y:y},{x:x,y:y+1},{x:x,y:y-1}].forEach(n=>{if(n.x>=0&&n.x<13&&n.y>=0&&n.y<13&&b[n.y][n.x]===o){if(getLiberties(b,n.x,n.y,o)===0)caps.push(...getGroup(b,n.x,n.y,o));}});return caps;}
