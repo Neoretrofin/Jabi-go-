@@ -11,14 +11,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 
 # --- КОНФИГУРАЦИЯ ДЛЯ DEPLOY ---
-# Ключ берется из настроек сервера, или используется запасной для локального запуска
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret_go_game_key_v16_no_bugs')
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-# Логика выбора Базы Данных:
-# 1. Пытаемся найти переменную DATABASE_URL (ее дает Render/Neon)
-# 2. Если она есть, исправляем старый формат 'postgres://' на новый 'postgresql://' для SQLAlchemy
-# 3. Если переменной нет (локальный запуск), используем файл go_game.db
 database_url = os.environ.get('DATABASE_URL')
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
@@ -27,13 +22,13 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.j
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-# Разрешаем CORS для всех источников, чтобы сокеты работали на проде
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # --- Модели БД ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    # УВЕЛИЧИЛИ РАЗМЕР ПОЛЯ ДО 256 СИМВОЛОВ
     password_hash = db.Column(db.String(256))
     wins = db.Column(db.Integer, default=0)
     losses = db.Column(db.Integer, default=0)
@@ -782,5 +777,5 @@ def sanitize_game(g):
     }
 
 if __name__ == '__main__':
-
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+
