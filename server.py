@@ -25,7 +25,6 @@ if database_url and database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'go_game.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Настройка движка БД для работы с Eventlet (предотвращает зависания)
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
     "pool_size": 10,
     "max_overflow": 20,
@@ -33,7 +32,6 @@ app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
 }
 
 db = SQLAlchemy(app)
-# async_mode='eventlet' явно указывает режим работы
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # --- Модели БД ---
@@ -88,7 +86,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[GoOnline:v25]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[GoOnline:v27]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -169,8 +167,15 @@ def calculate_elo(winner_elo, loser_elo):
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    if request.sid in online_users:
-        del online_users[request.sid]
+    sid = request.sid
+    if sid in online_users:
+        u = online_users[sid]
+        # Удаляем пользователя из списков зрителей всех игр
+        for gid, g in games.items():
+            if u['username'] in g['spectators']:
+                g['spectators'].remove(u['username'])
+        
+        del online_users[sid]
         broadcast_lobby_state()
 
 @socketio.on('login')
@@ -188,7 +193,6 @@ def handle_login(data):
             emit('login_error', {'msg': 'Неверный пароль'})
             return
     else:
-        # Используем pbkdf2:sha256 вместо scrypt для скорости на слабых серверах
         hashed = generate_password_hash(password, method='pbkdf2:sha256')
         user = User(username=username, password_hash=hashed)
         db.session.add(user)
@@ -263,14 +267,10 @@ def broadcast_lobby_state():
         u_db = User.query.get(v['user_id'])
         
         current_status = v['status']
+        # Мы убрали 'watching', поэтому если игра не playing, то всегда lobby
         gid = v['game_id']
-        
-        if gid and gid in games:
-            if games[gid]['phase'] == 'FINISHED':
-                current_status = 'watching'
-        
         if current_status == 'playing' and (not gid or gid not in games or games[gid]['phase'] == 'FINISHED'):
-             current_status = 'watching' if gid else 'lobby'
+             current_status = 'lobby'
 
         users_list.append({
             'sid': k, 
@@ -421,8 +421,9 @@ def handle_replay(data):
     record = GameRecord.query.get(rec_id)
     if not record: return
     
+    # Не меняем статус на watching, остаемся в lobby
     if request.sid in online_users and online_users[request.sid]['status'] != 'playing':
-        online_users[request.sid]['status'] = 'watching'
+        # Сбрасываем game_id, если смотрели другую
         online_users[request.sid]['game_id'] = None 
         broadcast_lobby_state()
 
@@ -716,6 +717,10 @@ def handle_leave():
         gid = u.get('game_id')
         if gid:
             leave_room(gid)
+            # Удаляем игрока из зрителей, если он просто смотрел
+            if gid in games and u['username'] in games[gid]['spectators']:
+                games[gid]['spectators'].remove(u['username'])
+
             if gid in games and games[gid]['phase'] == 'FINISHED':
                 u['game_id'] = None
                 u['status'] = 'lobby'
@@ -750,11 +755,12 @@ def spectate(data):
     gid = data['game_id']
     if gid in games:
         if online_users[sid]['status'] != 'playing':
-            online_users[sid]['status'] = 'watching'
+            online_users[sid]['status'] = 'lobby' # Статус всегда Lobby, даже когда смотрит
             online_users[sid]['game_id'] = gid
         
         leave_room('lobby'); join_room(gid)
-        games[gid]['spectators'].append(online_users[sid]['username'])
+        if online_users[sid]['username'] not in games[gid]['spectators']:
+             games[gid]['spectators'].append(online_users[sid]['username'])
         emit('game_start', {'game_id': gid, 'state': sanitize_game(games[gid]), 'role': 0, 'is_new_game': False})
         broadcast_lobby_state()
 
