@@ -1,3 +1,7 @@
+# --- МАГИЯ ASYNC (ОБЯЗАТЕЛЬНО В НАЧАЛЕ ФАЙЛА) ---
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import uuid
 import json
@@ -10,7 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-# --- КОНФИГУРАЦИЯ ДЛЯ DEPLOY ---
+# --- КОНФИГУРАЦИЯ ---
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'secret_go_game_key_v16_no_bugs')
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -21,14 +25,21 @@ if database_url and database_url.startswith("postgres://"):
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///' + os.path.join(basedir, 'go_game.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+# Настройка движка БД для работы с Eventlet (предотвращает зависания)
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    "pool_size": 10,
+    "max_overflow": 20,
+    "pool_recycle": 1800,
+}
+
 db = SQLAlchemy(app)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# async_mode='eventlet' явно указывает режим работы
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
 
 # --- Модели БД ---
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    # УВЕЛИЧИЛИ РАЗМЕР ПОЛЯ ДО 256 СИМВОЛОВ
     password_hash = db.Column(db.String(256))
     wins = db.Column(db.Integer, default=0)
     losses = db.Column(db.Integer, default=0)
@@ -77,7 +88,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[GoOnline:v24]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[GoOnline:v25]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -177,7 +188,8 @@ def handle_login(data):
             emit('login_error', {'msg': 'Неверный пароль'})
             return
     else:
-        hashed = generate_password_hash(password)
+        # Используем pbkdf2:sha256 вместо scrypt для скорости на слабых серверах
+        hashed = generate_password_hash(password, method='pbkdf2:sha256')
         user = User(username=username, password_hash=hashed)
         db.session.add(user)
         db.session.commit()
@@ -778,4 +790,3 @@ def sanitize_game(g):
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
-
