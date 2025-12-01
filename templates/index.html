@@ -1018,6 +1018,7 @@
         let mCount = isReview ? activeReviewIndex : gameState.move_count;
         let moveText = `Ход: ${mCount}`;
         
+        // Add Coordinates to text
         if (mCount > 0) {
             const relevantState = isReview ? gameState.full_history[mCount] : gameState;
             if (relevantState.last_move) {
@@ -1073,6 +1074,7 @@
                     <div>○ Б: <b>${scoreData.w_details.total}</b> (Т:${scoreData.w_details.terr})</div>
                     <div style="margin-top:5px; color:#00796b;">${scoreData.win === 1 ? "Ч" : "Б"} +${scoreData.diff}</div>
                 `;
+                // ALWAYS DRAW MAP IN SCORING PHASE
                 drawGenericBoard(liveCtx, gameState, scoreData.map);
                 return; 
             }
@@ -1141,7 +1143,7 @@
             }
         }
         
-        // Ghost Stone Logic (SIMPLIFIED for Reliability)
+        // Ghost Stone Logic
         if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && state === gameState && myRole === state.current_player) {
             let cx = PADDING + hoverStone.x * CELL_SIZE;
             let cy = PADDING + hoverStone.y * CELL_SIZE;
@@ -1215,7 +1217,14 @@
         
         let stateToDraw = getCurrentRenderState();
         
-        // Only calculate hover if we are actually PLAYING and current state is live state
+        // Calculate Map ON HOVER if scoring
+        let map = null;
+        if (gameState && gameState.phase === 'SCORING') {
+            const r = calcScoreGeneric(gameState.board, gameState.prisoners, gameState.dead_stones);
+            map = r.map;
+        }
+
+        // Ghost stone logic
         if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && stateToDraw === gameState) {
              const c = getBoardCoords(e, liveCanvas);
              if(c.x>=0 && c.x<BOARD_SIZE && c.y>=0 && c.y<BOARD_SIZE) {
@@ -1231,7 +1240,7 @@
             hoverStone = null;
         }
         
-        drawGenericBoard(liveCtx, stateToDraw, null);
+        drawGenericBoard(liveCtx, stateToDraw, map);
     });
 
     liveCanvas.addEventListener('click', e => {
