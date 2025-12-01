@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jabi Go</title>
+    <title>Jabi Go 🐸</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #eceff1; margin: 0; min-height: 100vh; display: flex; flex-direction: column; align-items: center; -webkit-tap-highlight-color: transparent; }
@@ -42,7 +42,6 @@
         .row-loss { border-left-color: #ef5350; background: #ffebee; }
         .status-lobby { color: #4caf50; font-weight: bold; }
         .status-playing { color: #ff9800; }
-        /* .status-watching removed */
         .action-btn { padding: 4px 10px; font-size: 0.8em; width: auto; margin: 0; }
         .link-btn { background:none; border:none; color:#1e88e5; cursor:pointer; padding:0; text-decoration:underline; font-size:0.9em; width:auto; text-align:left;}
 
@@ -211,7 +210,7 @@
 
     <div id="screen-login" class="screen active">
         <div id="login-box">
-            <h2>Jabi Go</h2>
+            <h2>Jabi Go 🐸</h2>
             <input type="text" id="username" placeholder="Логин">
             <input type="password" id="password" placeholder="Пароль">
             <button class="btn-green" onclick="login()">Войти</button>
@@ -836,12 +835,15 @@
     
     function renderReplayChat() {
         const box = document.getElementById('replay-chat'); box.innerHTML = '';
-        replayData.chat.forEach(m => {
-             let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
-             box.innerHTML += `<div class="chat-row"><div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
-        });
+        if(replayData && replayData.chat) {
+            replayData.chat.forEach(m => {
+                 let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
+                 box.innerHTML += `<div class="chat-row"><div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
+            });
+        }
         box.scrollTop = box.scrollHeight;
     }
+    
     function exitReplay() { 
         socket.emit('leave_game'); 
         showScreen('screen-lobby'); 
@@ -869,7 +871,6 @@
     
     socket.on('game_start', d => {
         // --- SPA: NO RELOAD ---
-        // Clean up previous game state manually
         gameState = d.state; myRole = d.role; prevLastMove = null; prevPasses = 0;
         tentativeMove = null;
         activeReviewIndex = -1;
@@ -1091,7 +1092,16 @@
             wait.style.display='none';
         }
         
-        drawGenericBoard(liveCtx, stateToShow, null);
+        // Use the helper here to draw the correct state
+        drawGenericBoard(liveCtx, getCurrentRenderState(), null);
+    }
+    
+    // Helper to determine what to draw on live board
+    function getCurrentRenderState() {
+        if (gameState && gameState.phase === 'FINISHED' && activeReviewIndex !== -1 && activeReviewIndex < gameState.full_history.length) {
+            return gameState.full_history[activeReviewIndex];
+        }
+        return gameState;
     }
 
     // --- DRAWING ---
@@ -1130,8 +1140,9 @@
             }
         }
         
-        // Ghost Stone (PC only)
-        if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && state.current_player === myRole) {
+        // Ghost Stone Logic (SIMPLIFIED for Reliability)
+        if(hoverStone && !isMobile() && gameState.phase === 'PLAYING' && state === gameState && myRole === state.current_player) {
+            // Simply draw ghost at hover coordinates
             let cx = PADDING + hoverStone.x * CELL_SIZE;
             let cy = PADDING + hoverStone.y * CELL_SIZE;
             ctx.globalAlpha = 0.5;
@@ -1184,7 +1195,6 @@
             map = r.map;
         }
         
-        // Fix: Use the helper to determine which state to draw (Active or Review)
         let stateToDraw = getCurrentRenderState();
         if(stateToDraw) drawGenericBoard(liveCtx, stateToDraw, map);
     });
@@ -1203,24 +1213,20 @@
         if(isMobile()) return; 
         if(!gameState) return;
         
-        // If we are in active review (game finished), we don't want hover stones
-        // Just ensuring we draw the review board is handled by the redraw call below
+        // Determine if we should calculate ghost stone
         let stateToDraw = getCurrentRenderState();
         
-        // Only calculate hover if we are actually PLAYING and current state is live state
+        // Reset first
+        hoverStone = null;
+
+        // If playing and it's my turn and we are viewing the live board
         if (gameState.phase === 'PLAYING' && myRole === gameState.current_player && stateToDraw === gameState) {
              const c = getBoardCoords(e, liveCanvas);
              if(c.x>=0 && c.x<BOARD_SIZE && c.y>=0 && c.y<BOARD_SIZE) {
                 if(gameState.board[c.y][c.x] === 0) {
                     hoverStone = {x: c.x, y: c.y};
-                } else {
-                    hoverStone = null;
                 }
-            } else {
-                hoverStone = null;
             }
-        } else {
-            hoverStone = null;
         }
         
         drawGenericBoard(liveCtx, stateToDraw, null);
@@ -1347,5 +1353,3 @@
 </script>
 </body>
 </html>
-
-
