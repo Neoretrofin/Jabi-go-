@@ -494,6 +494,11 @@
         eatSound.volume = v;
         document.getElementById('vol-icon').innerText = (v === 0) ? '🔇' : '🔊';
     });
+    
+    // --- KEEP ALIVE ---
+    setInterval(() => {
+        fetch('/keep_alive').catch(e => {});
+    }, 4 * 60 * 1000);
 
     const BOARD_SIZE = 13, CELL_SIZE = 50, PADDING = 50;
     const liveCanvas = document.getElementById('goBoard');
@@ -518,11 +523,12 @@
         document.getElementById(id).classList.add('active');
         if (id !== 'screen-login') document.getElementById('nav-bar').style.display = 'flex';
         
+        // -- FIX BUTTON VISIBILITY GLOBALLY --
         const btn = document.getElementById('global-return-btn');
-        if (id === 'screen-game') {
-            btn.style.display = 'none'; 
+        if (amIPlaying && id !== 'screen-game') {
+             btn.style.display = 'block';
         } else {
-            btn.style.display = amIPlaying ? 'block' : 'none';
+             btn.style.display = 'none';
         }
 
         if (id === 'screen-lobby') {
@@ -579,6 +585,23 @@
         document.getElementById('my-username').innerText = d.username;
         document.getElementById('my-elo').innerText = d.elo;
         showScreen('screen-lobby');
+    });
+    
+    // --- RE-SYNC ON RECONNECT/VISIBILITY ---
+    socket.on('connect', () => {
+         const u = localStorage.getItem('go_username');
+         const p = localStorage.getItem('go_password');
+         if(u && p) socket.emit('login', {username: u, password: p});
+         
+         if (gameState && gameState.id) {
+             socket.emit('request_sync', {game_id: gameState.id});
+         }
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && gameState && gameState.id) {
+             socket.emit('request_sync', {game_id: gameState.id});
+        }
     });
 
     // --- TOOLTIP ---
@@ -651,8 +674,12 @@
             </tr>`;
         });
         
-        if (!document.getElementById('screen-game').classList.contains('active')) {
-            document.getElementById('global-return-btn').style.display = amIPlaying ? 'block' : 'none';
+        // Force button check in case we are already on a screen
+        const btn = document.getElementById('global-return-btn');
+        if (amIPlaying && !document.getElementById('screen-game').classList.contains('active')) {
+            btn.style.display = 'block';
+        } else {
+            btn.style.display = 'none';
         }
 
         const gt = document.getElementById('game-table'); gt.innerHTML = '';
