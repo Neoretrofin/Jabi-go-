@@ -79,6 +79,11 @@ def serve_eat():
 def index():
     return render_template('index.html')
 
+# --- KEEP ALIVE ---
+@app.route('/keep_alive')
+def keep_alive():
+    return "OK", 200
+
 # --- SGF Генерация ---
 @app.route('/download_sgf/<int:record_id>')
 def download_sgf(record_id):
@@ -86,7 +91,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v31]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v33]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -259,6 +264,14 @@ def handle_login(data):
 def handle_refresh_lobby():
     join_room('lobby') 
     broadcast_lobby_state()
+
+@socketio.on('request_sync')
+def handle_sync(data):
+    gid = data.get('game_id')
+    if gid and gid in games:
+        join_room(gid)
+        g = games[gid]
+        emit('update_game', sanitize_game(g))
 
 def broadcast_lobby_state():
     users_list = []
@@ -556,8 +569,6 @@ def handle_pass():
     g['current_state'] = new_state
     g['full_history'].append(new_state)
 
-    # NO MORE SYSTEM MESSAGE IN CHAT FOR PASS
-
     if passes >= 2:
         g['phase'] = 'SCORING'
         g['confirmed_players'] = []
@@ -691,7 +702,6 @@ def handle_msg(data):
         if 1 in g['players'] and g['players'][1]['sid'] == sid: color = 1
         elif 2 in g['players'] and g['players'][2]['sid'] == sid: color = 2
     
-    # Add Move Number
     move_num = len(g['full_history']) - 1
     msg_obj = {
         'user': u['username'], 
@@ -702,7 +712,6 @@ def handle_msg(data):
     
     g['chat_history'].append(msg_obj)
     
-    # If Game is Finished, update DB Record
     if g['phase'] == 'FINISHED' and g.get('db_record_id'):
         rec = GameRecord.query.get(g['db_record_id'])
         if rec:
