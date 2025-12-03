@@ -91,7 +91,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v33]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v36]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -175,9 +175,43 @@ def handle_disconnect():
     sid = request.sid
     if sid in online_users:
         u = online_users[sid]
+        username = u['username']
+
+        # 1. Удаляем пользователя из списков зрителей всех игр
         for gid, g in games.items():
-            if u['username'] in g['spectators']:
-                g['spectators'].remove(u['username'])
+            if username in g['spectators']:
+                g['spectators'].remove(username)
+
+        # 2. ПРОВЕРКА НА ЗАВИСШИЕ ИГРЫ В SETUP (НОВОЕ)
+        # Если игрок вышел во время выбора цвета, игра должна быть удалена,
+        # а второй игрок возвращен в лобби.
+        games_to_delete = []
+        for gid, g in games.items():
+            if g['phase'] == 'SETUP':
+                p1 = g['setup_players']['challenger']
+                p2 = g['setup_players']['opponent']
+                
+                # Если отключившийся - один из участников
+                if p1['name'] == username or p2['name'] == username:
+                    # Уведомляем всех в комнате (там должен быть второй игрок)
+                    emit('server_notification', {'msg': 'Соперник отключился. Игра отменена.'}, room=gid)
+                    emit('return_to_lobby', room=gid)
+                    
+                    # Ищем второго игрока в online_users и сбрасываем ему статус
+                    # (так как он технически еще "playing" в базе памяти)
+                    other_name = p2['name'] if p1['name'] == username else p1['name']
+                    for osid, ou in online_users.items():
+                        if ou['username'] == other_name:
+                            ou['status'] = 'lobby'
+                            ou['game_id'] = None
+                            leave_room(gid, sid=osid)
+                    
+                    games_to_delete.append(gid)
+        
+        # Удаляем сломанные игры
+        for gid in games_to_delete:
+            del games[gid]
+        
         del online_users[sid]
         broadcast_lobby_state()
 
@@ -263,17 +297,10 @@ def handle_login(data):
 @socketio.on('refresh_lobby')
 def handle_refresh_lobby():
     join_room('lobby') 
-    broadcast_lobby_state()
+    # Send data DIRECTLY to the requester to avoid race conditions
+    emit('lobby_update', collect_lobby_data())
 
-@socketio.on('request_sync')
-def handle_sync(data):
-    gid = data.get('game_id')
-    if gid and gid in games:
-        join_room(gid)
-        g = games[gid]
-        emit('update_game', sanitize_game(g))
-
-def broadcast_lobby_state():
+def collect_lobby_data():
     users_list = []
     for k, v in online_users.items():
         u_db = User.query.get(v['user_id'])
@@ -304,7 +331,6 @@ def broadcast_lobby_state():
     recent_db = GameRecord.query.order_by(GameRecord.date.desc()).limit(8).all()
     finished_list = []
     for r in recent_db:
-        # Добавляем дату в ответ для лобби
         finished_list.append({
             'id': r.id,
             'p_black': r.player_black,
@@ -313,8 +339,19 @@ def broadcast_lobby_state():
             'winner_color': r.winner_color,
             'date': r.date.isoformat() 
         })
+    
+    return {'users': users_list, 'games': active_games, 'finished': finished_list}
 
-    emit('lobby_update', {'users': users_list, 'games': active_games, 'finished': finished_list}, room='lobby')
+def broadcast_lobby_state():
+    emit('lobby_update', collect_lobby_data(), room='lobby')
+
+@socketio.on('request_sync')
+def handle_sync(data):
+    gid = data.get('game_id')
+    if gid and gid in games:
+        join_room(gid)
+        g = games[gid]
+        emit('update_game', sanitize_game(g))
 
 # --- LEADERBOARD ---
 @socketio.on('get_leaderboard')
@@ -550,6 +587,9 @@ def handle_move(data):
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state) 
+    
+    # Move number for chat logging
+    move_num = len(g['full_history']) - 1
     
     emit('update_game', sanitize_game(g), room=g['id'])
 
