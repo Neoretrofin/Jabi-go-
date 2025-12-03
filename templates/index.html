@@ -42,7 +42,6 @@
         .row-loss { border-left-color: #ef5350; background: #ffebee; }
         .status-lobby { color: #4caf50; font-weight: bold; }
         .status-playing { color: #ff9800; }
-        .status-watching { color: #7e57c2; }
         .action-btn { padding: 4px 10px; font-size: 0.8em; width: auto; margin: 0; }
         .link-btn { background:none; border:none; color:#1e88e5; cursor:pointer; padding:0; text-decoration:underline; font-size:0.9em; width:auto; text-align:left;}
 
@@ -927,6 +926,13 @@
         gameState = d.state; myRole = d.role; prevLastMove = null; prevPasses = 0;
         tentativeMove = null;
         activeReviewIndex = -1;
+        // Correct amIPlaying if we are one of the players
+        if (d.role === 1 || d.role === 2 || d.role === 'challenger' || d.role === 'opponent') {
+            amIPlaying = true;
+        } else {
+            amIPlaying = false; // spectator
+        }
+
         document.getElementById('confirm-move-btn').style.display = 'none';
         
         document.getElementById('chat-msgs').innerHTML = '';
@@ -984,6 +990,8 @@
     });
     
     socket.on('return_to_lobby', () => { 
+        // This means the game room is fully disbanded for me or I was kicked
+        amIPlaying = false; 
         showScreen('screen-lobby'); 
         gameState=null; 
     });
@@ -994,6 +1002,8 @@
             return;
         }
         socket.emit('leave_game');
+        // Reset local playing flag if we really leave (finished game or spectator)
+        amIPlaying = false;
     }
     
     function downloadSGF() {
@@ -1072,6 +1082,7 @@
         let mCount = isReview ? activeReviewIndex : gameState.move_count;
         let moveText = `Ход: ${mCount}`;
         
+        // Add Coordinates to text
         if (mCount > 0) {
             const relevantState = isReview ? gameState.full_history[mCount] : gameState;
             if (relevantState.last_move) {
@@ -1127,6 +1138,7 @@
                     <div>○ Б: <b>${scoreData.w_details.total}</b> (Т:${scoreData.w_details.terr})</div>
                     <div style="margin-top:5px; color:#00796b;">${scoreData.win === 1 ? "Ч" : "Б"} +${scoreData.diff}</div>
                 `;
+                // ALWAYS DRAW MAP IN SCORING PHASE
                 drawGenericBoard(liveCtx, gameState, scoreData.map);
                 return; 
             }
