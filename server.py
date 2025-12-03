@@ -91,7 +91,7 @@ def download_sgf(record_id):
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v36]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v37]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -182,23 +182,17 @@ def handle_disconnect():
             if username in g['spectators']:
                 g['spectators'].remove(username)
 
-        # 2. ПРОВЕРКА НА ЗАВИСШИЕ ИГРЫ В SETUP (НОВОЕ)
-        # Если игрок вышел во время выбора цвета, игра должна быть удалена,
-        # а второй игрок возвращен в лобби.
+        # 2. ПРОВЕРКА НА ЗАВИСШИЕ ИГРЫ В SETUP
         games_to_delete = []
         for gid, g in games.items():
             if g['phase'] == 'SETUP':
                 p1 = g['setup_players']['challenger']
                 p2 = g['setup_players']['opponent']
                 
-                # Если отключившийся - один из участников
                 if p1['name'] == username or p2['name'] == username:
-                    # Уведомляем всех в комнате (там должен быть второй игрок)
                     emit('server_notification', {'msg': 'Соперник отключился. Игра отменена.'}, room=gid)
                     emit('return_to_lobby', room=gid)
                     
-                    # Ищем второго игрока в online_users и сбрасываем ему статус
-                    # (так как он технически еще "playing" в базе памяти)
                     other_name = p2['name'] if p1['name'] == username else p1['name']
                     for osid, ou in online_users.items():
                         if ou['username'] == other_name:
@@ -208,7 +202,6 @@ def handle_disconnect():
                     
                     games_to_delete.append(gid)
         
-        # Удаляем сломанные игры
         for gid in games_to_delete:
             del games[gid]
         
@@ -297,7 +290,6 @@ def handle_login(data):
 @socketio.on('refresh_lobby')
 def handle_refresh_lobby():
     join_room('lobby') 
-    # Send data DIRECTLY to the requester to avoid race conditions
     emit('lobby_update', collect_lobby_data())
 
 def collect_lobby_data():
@@ -588,7 +580,6 @@ def handle_move(data):
     g['current_state'] = new_state
     g['full_history'].append(new_state) 
     
-    # Move number for chat logging
     move_num = len(g['full_history']) - 1
     
     emit('update_game', sanitize_game(g), room=g['id'])
@@ -665,6 +656,7 @@ def handle_resume_game():
     if not g or role == 0 or g['phase'] != 'SCORING': return
     g['phase'] = 'PLAYING'
     g['current_state']['consecutive_passes'] = 0
+    g['current_state']['dead_stones'] = [] # Clear dead stones!
     g['confirmed_players'] = []
     emit('update_game', sanitize_game(g), room=g['id'])
     emit('server_notification', {'msg': 'Игра продолжена.'}, room=g['id'])
