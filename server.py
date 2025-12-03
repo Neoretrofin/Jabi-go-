@@ -304,12 +304,14 @@ def broadcast_lobby_state():
     recent_db = GameRecord.query.order_by(GameRecord.date.desc()).limit(8).all()
     finished_list = []
     for r in recent_db:
+        # Добавляем дату в ответ для лобби
         finished_list.append({
             'id': r.id,
             'p_black': r.player_black,
             'p_white': r.player_white,
             'result': r.result_text,
-            'winner_color': r.winner_color
+            'winner_color': r.winner_color,
+            'date': r.date.isoformat() 
         })
 
     emit('lobby_update', {'users': users_list, 'games': active_games, 'finished': finished_list}, room='lobby')
