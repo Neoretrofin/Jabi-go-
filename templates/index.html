@@ -42,6 +42,7 @@
         .row-loss { border-left-color: #ef5350; background: #ffebee; }
         .status-lobby { color: #4caf50; font-weight: bold; }
         .status-playing { color: #ff9800; }
+        .status-watching { color: #7e57c2; }
         .action-btn { padding: 4px 10px; font-size: 0.8em; width: auto; margin: 0; }
         .link-btn { background:none; border:none; color:#1e88e5; cursor:pointer; padding:0; text-decoration:underline; font-size:0.9em; width:auto; text-align:left;}
 
@@ -932,6 +933,20 @@
         } else {
             amIPlaying = false; // spectator
         }
+        
+        // Initialize prevLastMove correctly to avoid phantom sound on reconnect
+        if (d.state.last_move) {
+            prevLastMove = d.state.last_move;
+        } else {
+            prevLastMove = null;
+        }
+        
+        // Initialize prevPasses correctly
+        if (d.state.consecutive_passes !== undefined) {
+            prevPasses = d.state.consecutive_passes;
+        } else {
+            prevPasses = 0;
+        }
 
         document.getElementById('confirm-move-btn').style.display = 'none';
         
@@ -992,6 +1007,7 @@
     socket.on('return_to_lobby', () => { 
         // This means the game room is fully disbanded for me or I was kicked
         amIPlaying = false; 
+        document.getElementById('modal-setup').style.display = 'none';
         showScreen('screen-lobby'); 
         gameState=null; 
     });
