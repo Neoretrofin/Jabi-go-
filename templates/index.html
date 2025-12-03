@@ -89,8 +89,11 @@
         .elo-msg-win { color: #2e7d32; }
         .elo-msg-loss { color: #c62828; }
 
-        .chat-row { margin-bottom: 4px; display: flex; align-items: flex-start;}
-        .stone-icon { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-top: 3px; margin-right: 5px; }
+        /* Chat Row Flex */
+        .chat-row { display: flex; margin-bottom: 4px; align-items: flex-start; }
+        .chat-meta { white-space: nowrap; display: flex; align-items: center; margin-right: 5px; }
+
+        .stone-icon { width: 12px; height: 12px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-right: 5px; }
         .stone-icon.black { background: #000; border: 1px solid #000; }
         .stone-icon.white { background: #fff; border: 1px solid #ccc; }
         .stone-icon.spec { background: #ccc; border: 1px solid #999; }
@@ -243,7 +246,7 @@
                     <button class="btn-blue" style="width:auto; padding:5px 10px; font-size:0.9em;" onclick="openFullHistory()">Показать все</button>
                 </div>
                 <div style="flex:1; overflow-y:auto;">
-                    <table><thead><tr><th>Чёрные</th><th>Белые</th><th>Рез</th></tr></thead><tbody id="finished-table"></tbody></table>
+                    <table><thead><tr><th>Чёрные</th><th>Белые</th><th>Рез</th><th>Дата</th></tr></thead><tbody id="finished-table"></tbody></table>
                 </div>
             </div>
         </div>
@@ -518,6 +521,16 @@
         return d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     }
 
+    // --- FORMAT DATE HELPER ---
+    function formatDateShort(isoStr) {
+        if (!isoStr) return "";
+        const d = new Date(isoStr);
+        const day = d.getDate().toString().padStart(2, '0');
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
+        const year = d.getFullYear().toString().slice(-2);
+        return `${day}.${month}.${year}`;
+    }
+
     function showScreen(id) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.getElementById(id).classList.add('active');
@@ -700,11 +713,13 @@
         d.finished.forEach(g => {
             let p1Name = g.p_black + (g.winner_color === 1 ? ' 🏆' : '');
             let p2Name = g.p_white + (g.winner_color === 2 ? ' 🏆' : '');
+            let shortDate = formatDateShort(g.date);
 
             ft.innerHTML += `<tr class="clickable-row" onclick="loadReplay(${g.id})">
                 <td><span class="clickable-name" onclick="event.stopPropagation(); openProfile('${g.p_black}')" onmousemove="showTooltip(event, '${g.p_black}')" onmouseleave="hideTooltip()">${p1Name}</span></td>
                 <td><span class="clickable-name" onclick="event.stopPropagation(); openProfile('${g.p_white}')" onmousemove="showTooltip(event, '${g.p_white}')" onmouseleave="hideTooltip()">${p2Name}</span></td>
                 <td><b>${g.result}</b></td>
+                <td style="font-size:0.9em; color:#666;">${shortDate}</td>
             </tr>`;
         });
     });
@@ -867,7 +882,16 @@
             replayData.chat.forEach(m => {
                  let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
                  let moveInfo = (m.move !== undefined) ? `<span style="color:#999; font-size:0.8em; margin-right:4px;">[${m.move}]</span>` : '';
-                 box.innerHTML += `<div class="chat-row">${moveInfo}<div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
+                 
+                 box.innerHTML += `
+                 <div class="chat-row">
+                    <span class="chat-meta">
+                        ${moveInfo}
+                        <div class="${iconClass}"></div>
+                        <b>${m.user}: </b>
+                    </span>
+                    <span>${m.text}</span>
+                 </div>`;
             });
         }
         box.scrollTop = box.scrollHeight;
@@ -929,8 +953,11 @@
         }
         
         if (s.phase === 'FINISHED' && s.is_resign) {
-            dingSound.currentTime = 0;
-            dingSound.play().catch(e => console.log(e));
+            // --- FIX: ONLY PLAY SOUND IF NOT ALREADY FINISHED ---
+            if (!gameState || gameState.phase !== 'FINISHED') {
+                dingSound.currentTime = 0;
+                dingSound.play().catch(e => console.log(e));
+            }
         }
         
         if (s.consecutive_passes > prevPasses) {
@@ -1045,7 +1072,6 @@
         let mCount = isReview ? activeReviewIndex : gameState.move_count;
         let moveText = `Ход: ${mCount}`;
         
-        // Add Coordinates to text
         if (mCount > 0) {
             const relevantState = isReview ? gameState.full_history[mCount] : gameState;
             if (relevantState.last_move) {
@@ -1101,7 +1127,6 @@
                     <div>○ Б: <b>${scoreData.w_details.total}</b> (Т:${scoreData.w_details.terr})</div>
                     <div style="margin-top:5px; color:#00796b;">${scoreData.win === 1 ? "Ч" : "Б"} +${scoreData.diff}</div>
                 `;
-                // ALWAYS DRAW MAP IN SCORING PHASE
                 drawGenericBoard(liveCtx, gameState, scoreData.map);
                 return; 
             }
@@ -1326,7 +1351,17 @@
         const box = document.getElementById('chat-msgs');
         let iconClass = m.color === 1 ? "stone-icon black" : (m.color === 2 ? "stone-icon white" : "stone-icon spec");
         let moveInfo = (m.move !== undefined) ? `<span style="color:#999; font-size:0.8em; margin-right:4px;">[${m.move}]</span>` : '';
-        box.innerHTML += `<div class="chat-row">${moveInfo}<div class="${iconClass}"></div><b>${m.user}:</b> ${m.text}</div>`;
+        
+        box.innerHTML += `
+        <div class="chat-row">
+           <span class="chat-meta">
+               ${moveInfo}
+               <div class="${iconClass}"></div>
+               <b>${m.user}: </b>
+           </span>
+           <span>${m.text}</span>
+        </div>`;
+        
         box.scrollTop = box.scrollHeight;
     }
 
