@@ -7,6 +7,7 @@ import uuid
 import json
 import base64
 from datetime import datetime
+from urllib.parse import quote  # <--- ДОБАВЛЕН ИМПОРТ ДЛЯ КОДИРОВКИ ИМЕН ФАЙЛОВ
 from flask import Flask, render_template, request, send_from_directory, make_response
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
@@ -84,14 +85,14 @@ def index():
 def keep_alive():
     return "OK", 200
 
-# --- SGF Генерация ---
+# --- SGF Генерация (ИСПРАВЛЕНО СКАЧИВАНИЕ) ---
 @app.route('/download_sgf/<int:record_id>')
 def download_sgf(record_id):
     record = GameRecord.query.get(record_id)
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v37]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v38]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -119,9 +120,19 @@ def download_sgf(record_id):
     sgf += ")"
 
     response = make_response(sgf)
-    filename = f"game_{record_id}_{record.player_black}_vs_{record.player_white}.sgf"
-    response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+    
+    # Исправление для русских имен файлов на сервере (RFC 5987)
+    # 1. Формируем полное имя файла
+    full_filename = f"game_{record_id}_{record.player_black}_vs_{record.player_white}.sgf"
+    # 2. Кодируем его для URL (превращаем русские буквы в %D0%BC...)
+    encoded_filename = quote(full_filename)
+    # 3. Безопасное имя (только латиница) для старых браузеров (или как fallback)
+    ascii_filename = f"game_{record_id}.sgf"
+
+    # Заголовок с поддержкой UTF-8
+    response.headers["Content-Disposition"] = f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
     response.headers["Content-Type"] = "application/x-go-sgf"
+    
     return response
 
 # --- Логика игры ---
@@ -601,6 +612,8 @@ def handle_pass():
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state)
+
+    # NO MORE SYSTEM MESSAGE IN CHAT FOR PASS
 
     if passes >= 2:
         g['phase'] = 'SCORING'
