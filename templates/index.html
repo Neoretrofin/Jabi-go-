@@ -479,6 +479,9 @@
     
     // Immediate Review
     let activeReviewIndex = -1;
+    
+    // Move Debounce
+    let isProcessingMove = false;
 
     const moveSound = new Audio('/stone.mp3');
     const dingSound = new Audio('/ding.mp3');
@@ -959,6 +962,9 @@
     function pickColor(c) { socket.emit('setup_pick_color', {color: c}); }
 
     socket.on('update_game', s => { 
+        // Reset busy flag
+        isProcessingMove = false;
+        
         if (s.last_move && (!prevLastMove || s.last_move.x !== prevLastMove.x || s.last_move.y !== prevLastMove.y)) {
             moveSound.currentTime = 0;
             moveSound.play().catch(e => console.log(e));
@@ -1354,7 +1360,11 @@
     }
 
     function tryMove(x, y) {
+        if(isProcessingMove) return; // Block double submit
+
         if(gameState.board[y][x]!==0) return;
+        
+        // Client side logic for preview
         let newB = gameState.board.map(r=>[...r]); newB[y][x]=myRole;
         let caps = getCaptures(newB, x, y, myRole);
         if(getLiberties(newB, x, y, myRole)===0 && caps.length===0) return showAlert("Суицид запрещен!");
@@ -1362,6 +1372,8 @@
         caps.forEach(p=>newB[p.y][p.x]=0);
         let newPris={...gameState.prisoners}; newPris[myRole]+=caps.length;
         let ko=null; if(caps.length===1 && getLiberties(newB, x, y, myRole)===1 && getGroup(newB, x, y, myRole).length===1) ko={x:caps[0].x,y:caps[0].y};
+        
+        isProcessingMove = true; // Set busy flag
         socket.emit('make_move', {board: newB, prisoners: newPris, ko: ko, move_x: x, move_y: y});
     }
 
