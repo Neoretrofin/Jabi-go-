@@ -7,7 +7,7 @@ import uuid
 import json
 import base64
 from datetime import datetime
-from urllib.parse import quote  # <--- ДОБАВЛЕН ИМПОРТ ДЛЯ КОДИРОВКИ ИМЕН ФАЙЛОВ
+from urllib.parse import quote
 from flask import Flask, render_template, request, send_from_directory, make_response
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
@@ -85,14 +85,14 @@ def index():
 def keep_alive():
     return "OK", 200
 
-# --- SGF Генерация (ИСПРАВЛЕНО СКАЧИВАНИЕ) ---
+# --- SGF Генерация ---
 @app.route('/download_sgf/<int:record_id>')
 def download_sgf(record_id):
     record = GameRecord.query.get(record_id)
     if not record:
         return "Game not found", 404
 
-    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v38]ST[2]\n"
+    sgf = "(;GM[1]FF[4]CA[UTF-8]AP[JabiGo:v39]ST[2]\n"
     sgf += f"RU[Japanese]SZ[13]KM[6.5]\n"
     sgf += f"PW[{record.player_white}]PB[{record.player_black}]\n"
     sgf += f"DT[{record.date.strftime('%Y-%m-%d')}]\n"
@@ -121,18 +121,12 @@ def download_sgf(record_id):
 
     response = make_response(sgf)
     
-    # Исправление для русских имен файлов на сервере (RFC 5987)
-    # 1. Формируем полное имя файла
     full_filename = f"game_{record_id}_{record.player_black}_vs_{record.player_white}.sgf"
-    # 2. Кодируем его для URL (превращаем русские буквы в %D0%BC...)
     encoded_filename = quote(full_filename)
-    # 3. Безопасное имя (только латиница) для старых браузеров (или как fallback)
     ascii_filename = f"game_{record_id}.sgf"
 
-    # Заголовок с поддержкой UTF-8
     response.headers["Content-Disposition"] = f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
     response.headers["Content-Type"] = "application/x-go-sgf"
-    
     return response
 
 # --- Логика игры ---
@@ -188,12 +182,10 @@ def handle_disconnect():
         u = online_users[sid]
         username = u['username']
 
-        # 1. Удаляем пользователя из списков зрителей всех игр
         for gid, g in games.items():
             if username in g['spectators']:
                 g['spectators'].remove(username)
 
-        # 2. ПРОВЕРКА НА ЗАВИСШИЕ ИГРЫ В SETUP
         games_to_delete = []
         for gid, g in games.items():
             if g['phase'] == 'SETUP':
@@ -255,7 +247,6 @@ def handle_login(data):
     join_room('lobby')
     emit('login_success', {'username': user.username, 'elo': user.elo})
     
-    # Реконнект
     active_gid = None
     for gid, g in games.items():
         if g['phase'] != 'FINISHED':
@@ -578,6 +569,12 @@ def get_game_and_role(sid):
 def handle_move(data):
     g, role = get_game_and_role(request.sid)
     if not g or role != g['current_state']['current_player']: return
+    
+    # ЗАЩИТА ОТ ДВОЙНОГО КЛИКА / ЛАГОВ
+    # Если на сервере в этом месте уже стоит камень, игнорируем ход
+    move_x, move_y = data['move_x'], data['move_y']
+    if g['current_state']['board'][move_y][move_x] != 0:
+        return
 
     new_state = {
         'board': data['board'],
@@ -586,7 +583,7 @@ def handle_move(data):
         'ko_position': data['ko'],
         'consecutive_passes': 0,
         'dead_stones': [],
-        'last_move': {'x': data['move_x'], 'y': data['move_y']}
+        'last_move': {'x': move_x, 'y': move_y}
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state) 
@@ -612,8 +609,6 @@ def handle_pass():
     }
     g['current_state'] = new_state
     g['full_history'].append(new_state)
-
-    # NO MORE SYSTEM MESSAGE IN CHAT FOR PASS
 
     if passes >= 2:
         g['phase'] = 'SCORING'
@@ -669,7 +664,7 @@ def handle_resume_game():
     if not g or role == 0 or g['phase'] != 'SCORING': return
     g['phase'] = 'PLAYING'
     g['current_state']['consecutive_passes'] = 0
-    g['current_state']['dead_stones'] = [] # Clear dead stones!
+    g['current_state']['dead_stones'] = []
     g['confirmed_players'] = []
     emit('update_game', sanitize_game(g), room=g['id'])
     emit('server_notification', {'msg': 'Игра продолжена.'}, room=g['id'])
