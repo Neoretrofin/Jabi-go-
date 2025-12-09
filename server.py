@@ -350,7 +350,8 @@ def handle_sync(data):
 # --- LEADERBOARD ---
 @socketio.on('get_leaderboard')
 def handle_get_leaderboard():
-    users_db = User.query.order_by(User.elo.desc()).limit(100).all()
+    # Фильтрация: показываем только тех, кто сыграл хотя бы одну игру (wins + losses > 0)
+    users_db = User.query.filter((User.wins + User.losses) > 0).order_by(User.elo.desc()).limit(100).all()
     lb_data = []
     for u in users_db:
         lb_data.append({
